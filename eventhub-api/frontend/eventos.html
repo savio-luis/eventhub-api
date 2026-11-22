@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>EventHub - Eventos Acadêmicos</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">🎓 EventHub</a>
+      <div>
+        <a href="admin.html" class="btn btn-light btn-sm me-2">+ Criar Evento</a>
+        <button onclick="logout()" class="btn btn-outline-light btn-sm">Sair</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <h3 class="mb-4">Próximos Eventos Acadêmicos</h3>
+    <div id="alerta" class="alert d-none"></div>
+    <div id="listaEventos" class="row"></div>
+  </div>
+
+  <script>
+    const API_URL = "http://127.0.0.1:8000/api/v1";
+    const usuarioId = localStorage.getItem('usuario_id');
+
+    async function carregarEventos() {
+      const resp = await fetch(`${API_URL}/eventos/`);
+      const eventos = await resp.json();
+      const container = document.getElementById('listaEventos');
+      container.innerHTML = '';
+
+      if (eventos.length === 0) {
+        container.innerHTML = '<p class="text-muted">Nenhum evento cadastrado no momento.</p>';
+        return;
+      }
+
+      eventos.forEach(evt => {
+        const dataFormatada = new Date(evt.data_evento).toLocaleString('pt-BR');
+        container.innerHTML += `
+          <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+              <div class="card-body">
+                <h5 class="card-title text-primary">${evt.titulo}</h5>
+                <p class="card-text text-muted">${evt.descricao || 'Sem descrição.'}</p>
+                <p class="mb-1"><strong>Data:</strong> ${dataFormatada}</p>
+                <p class="mb-3"><strong>Capacidade:</strong> ${evt.capacidade} vagas</p>
+                <button class="btn btn-success w-100" onclick="inscrever(${evt.id})">Garantir Vaga</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    async function inscrever(eventoId) {
+      if (!usuarioId) {
+        alert("Por favor, faça login primeiro!");
+        window.location.href = "index.html";
+        return;
+      }
+
+      const resp = await fetch(`${API_URL}/inscricoes/?usuario_id=${usuarioId}&evento_id=${eventoId}`, {
+        method: 'POST'
+      });
+
+      const alerta = document.getElementById('alerta');
+      alerta.classList.remove('d-none', 'alert-danger', 'alert-success');
+
+      if (resp.ok) {
+        alerta.classList.add('alert-success');
+        alerta.innerText = "Inscrição realizada com sucesso!";
+      } else {
+        const err = await resp.json();
+        alerta.classList.add('alert-danger');
+        alerta.innerText = err.detail || "Erro ao realizar inscrição.";
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = "index.html";
+    }
+
+    carregarEventos();
+  </script>
+</body>
+</html>
